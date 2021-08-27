@@ -1,8 +1,6 @@
-resource "ibm_iam_access_group" "accgrp" {
-  name = "test"
-}
+module "access-group" {
+  source = "./modules/access-group"
 
-resource "ibm_iam_access_group_policy" "policy" {
-  access_group_id = ibm_iam_access_group.accgrp.id
-  roles           = ["Viewer"]
+  access_group_name = var.access_group_name
+  roles             = var.roles
 }

@@ -1,10 +1,5 @@
-variable "access_group_name" {
-  description = "Access group name"
+variable "cluster_id" {
+  description = "cluster id"
   type        = string
-  default     = "sample-grp-01"
-}
-
-variable "roles" {
-  type    = list(string)
-  default = ["Writer"]
+  default     = "cqfc63rb0r25hmha3jfg"
 }

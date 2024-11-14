@@ -1,6 +1,3 @@
-module "access-group" {
-  source = "./modules/access-group"
-
-  access_group_name = var.access_group_name
-  roles             = var.roles
+data "ibm_container_cluster_config" "config" {
+  cluster_name_id = var.cluster_id
 }

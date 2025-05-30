@@ -172,13 +172,10 @@ def classify_logs():
 def home():
     return "Hello from the Auto-heal! Hit /classify to check/heal the system."
 
-def trigger_failure():
-    global healthy
-    time.sleep(FAIL_AFTER)
-    print("Simulating app failure now...")
-    healthy = False
+def trigger_test():
+    print("Simulating app classification log now...")
 
 
 if __name__ == '__main__':
-    threading.Thread(target=trigger_failure).start()
+    threading.Thread(target=trigger_test).start()
     app.run(host='0.0.0.0', port=8080)

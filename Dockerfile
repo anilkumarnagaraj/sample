@@ -3,8 +3,9 @@ FROM python:3.10-slim
 WORKDIR /app
 COPY fail_app.py .
 
-RUN pip install flask
+# Install required Python packages
+RUN pip install flask transformers python-dateutil
 
 ENV FAIL_AFTER=30
 
-CMD ["python", "fail_app.py"]
+CMD ["python", "app.py"]

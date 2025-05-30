@@ -3,13 +3,16 @@ import json
 from typing import Optional, Dict, List
 from dateutil import parser
 from datetime import timezone
-from transformers import pipeline
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Initialize zero-shot classifier once
-zero_shot_classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+# Component detection patterns
+COMPONENT_PATTERNS = {
+    "microservice": [r"service", r"ms-", r"microservice", r"api"],
+    "kubernetes": [r"k8s", r"kubernetes", r"pod", r"node", r"container"],
+    "prometheus": [r"prometheus", r"metric", r"grafana", r"alertmanager"]
+}
 
 def normalize_timestamp(ts_str: str) -> str:
     try:
@@ -50,22 +53,19 @@ def infer_tags(message: str, component: str, level: str) -> List[str]:
             tags.append(tag)
     return list(set(tags))
 
-def predict_component_with_llm(text: str) -> str:
-    candidate_labels = ["microservice", "kubernetes", "prometheus", "unknown"]
-    try:
-        result = zero_shot_classifier(text, candidate_labels)
-        for label, score in zip(result['labels'], result['scores']):
-            if label != 'unknown' and score > 0.4:
-                return label
-        return "unknown"
-    except Exception as e:
-        print(f"[LLM ERROR] {e}")
-        return "unknown"
+def predict_component(text: str) -> str:
+    """Simple pattern matching for component detection"""
+    text_lower = text.lower()
+    for component, patterns in COMPONENT_PATTERNS.items():
+        for pattern in patterns:
+            if re.search(pattern, text_lower):
+                return component
+    return "unknown"
 
 def detect_source_type_and_component(line: str, component: Optional[str]) -> (str, str):
     if component and component.lower() != "unknown":
         return component, component.lower()
-    predicted = predict_component_with_llm(line)
+    predicted = predict_component(line)
     return predicted, predicted
 
 def parse_json_log(line: str) -> Optional[Dict]:
@@ -150,32 +150,59 @@ def process_log_line(line: str) -> Optional[Dict]:
             return result
     return None
 
-@app.route("/classify", methods=["POST"])
+@app.route('/classify', methods=['POST'])
 def classify_logs():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file part in the request"}), 400
+    """
+    Endpoint to classify logs from a file or direct text input
+    Accepts:
+    - file: log file to process
+    - text: direct log text to process
+    """
+    if 'file' in request.files:
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "No selected file"}), 400
+        
+        output = []
+        for line in file.stream:
+            line = line.decode("utf-8").strip()
+            parsed = process_log_line(line)
+            if parsed:
+                output.append(parsed)
+        return jsonify(output), 200
+    
+    elif 'text' in request.json:
+        lines = request.json['text'].split('\n')
+        output = []
+        for line in lines:
+            parsed = process_log_line(line.strip())
+            if parsed:
+                output.append(parsed)
+        return jsonify(output), 200
+    
+    return jsonify({"error": "No log data provided"}), 400
 
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
-
-    output = []
-    for line in file.stream:
-        line = line.decode("utf-8").strip()
-        parsed = process_log_line(line)
-        if parsed:
-            output.append(parsed)
-
-    return jsonify(output), 200
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({"status": "healthy", "version": "1.0"})
 
 @app.route('/')
 def home():
-    return "Hello from the Auto-heal! Hit /classify to check/heal the system."
-
-def trigger_test():
-    print("Welcome to Auto-Heal Application!!!!")
-
+    """Default endpoint with usage instructions"""
+    return """
+    <h1>Log Classification Service</h1>
+    <p>Endpoints:</p>
+    <ul>
+        <li>POST /classify - Process log file or text</li>
+        <li>GET /health - Service health check</li>
+    </ul>
+    <p>Send logs as either:</p>
+    <ul>
+        <li>File upload with 'file' form field</li>
+        <li>JSON with {'text': 'log lines\\n'} in request body</li>
+    </ul>
+    """
 
 if __name__ == '__main__':
-    threading.Thread(target=trigger_test).start()
-    app.run(host='0.0.0.0', port=8081)
+    app.run(host='0.0.0.0', port=8080)

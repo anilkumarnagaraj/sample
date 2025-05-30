@@ -168,5 +168,10 @@ def classify_logs():
 
     return jsonify(output), 200
 
-if __name__ == "__main__":
-    app.run(debug=True)
+@app.route('/')
+def home():
+    return "Hello from the Auto-heal! Hit /classify to check/heal the system."
+
+if __name__ == '__main__':
+    threading.Thread(target=trigger_failure).start()
+    app.run(host='0.0.0.0', port=8080)

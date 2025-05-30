@@ -1,3 +1,10 @@
+# Core requirements
 flask==2.3.2
 python-dateutil==2.8.2
 regex==2023.6.3
+
+# Production WSGI server (recommended instead of flask run)
+gunicorn==21.2.0
+
+# Optional (for better JSON handling)
+blinker==1.7.0

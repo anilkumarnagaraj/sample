@@ -1,27 +1,43 @@
-# Use Python 3.10 base image
-FROM python:3.10-slim
+# Stage 1: Build stage
+FROM python:3.10-slim as builder
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+WORKDIR /app
 
-# Install system dependencies
+# Install build dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends gcc python3-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# Create and set working directory
-WORKDIR /app
+# Create and activate virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Stage 2: Runtime stage
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Copy only necessary files from builder
+COPY --from=builder /opt/venv /opt/venv
 COPY . .
 
-# Expose the port the app runs on
+# Set environment variables
+ENV PATH="/opt/venv/bin:$PATH"
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+ENV FLASK_APP=app.py
+ENV FLASK_ENV=production
+
+# Expose the port
 EXPOSE 8080
 
-# Command to run the application
-CMD ["python", "app.py"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD curl -f http://localhost:8080/health || exit 1
+
+# Run the application
+CMD ["flask", "run", "--host=0.0.0.0", "--port=8080"]

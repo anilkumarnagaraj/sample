@@ -173,7 +173,7 @@ def home():
     return "Hello from the Auto-heal! Hit /classify to check/heal the system."
 
 def trigger_test():
-    print("Simulating app classification log now...")
+    print("Welcome to Auto-Heal Application!!!!")
 
 
 if __name__ == '__main__':

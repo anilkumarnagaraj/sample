@@ -56,7 +56,8 @@ def infer_tags(message: str, component: str, level: str) -> List[str]:
         r"back[-\s]?off": "error.retry",
         r"crashed": "error.crash",
         r"exceeds threshold": "error.threshold_exceeded",
-        r"alert": "error.alert"
+        r"alert": "error.alert",
+        r"<!doctype html>": "error.html_response"
     }
     message_lower = message.lower()
     for pattern, tag in keywords.items():
@@ -83,7 +84,6 @@ def parse_json_log(line: str) -> Optional[Dict]:
     try:
         obj = json.loads(line)
         level = obj.get("level", "").lower()
-        # Capture both error-level logs and logs containing "error" in message
         if level not in ["error", "warn", "warning", "alert"] and "error" not in obj.get("msg", "").lower() and "error" not in obj.get("message", "").lower():
             return None
             
@@ -184,15 +184,17 @@ def parse_gin_log(line: str) -> Optional[Dict]:
 
 def parse_http_status_log(line: str) -> Optional[Dict]:
     """
-    Parses logs in format: "2025-05-31T18:41:32Z Error Status: 429 - Response: <!doctype html>"
+    Parses logs in format: "2025-05-31T19:37:19Z - Error - Status: 200 - Response: {"pod":"backend-86f595f85d-tml6m","status":"ok"}"
     """
-    pattern = r"^(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)\s+(?P<level>\w+)\s+Status:\s(?P<status>\d{3})\s+-\s+Response:\s(?P<response>.+)$"
+    pattern = r"^(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)\s+-\s+(?P<level>\w+)\s+-\s+Status:\s(?P<status>\d{3})\s+-\s+Response:\s(?P<response>.+)$"
     match = re.match(pattern, line)
     if match:
         status_code = match.group("status")
         level = match.group("level").lower()
+        
         try:
             code = int(status_code)
+            # Only process if marked as error/warning OR status code >= 400
             if code < 400 and level not in ["error", "warn", "warning"]:
                 return None
         except:
@@ -204,12 +206,20 @@ def parse_http_status_log(line: str) -> Optional[Dict]:
 
         component_pred, source_type = detect_source_type_and_component(line, component)
 
+        # Determine label based on both status code and log level
+        if level == "error" or code >= 500:
+            label = "Error"
+        elif level in ["warn", "warning"] or code >= 400:
+            label = "Warning"
+        else:
+            label = "Info"
+
         return {
             "timestamp": timestamp,
             "log": message,
-            "label": "Error" if code >= 500 or level == "error" else ("Warning" if code >= 400 or level in ["warn", "warning"] else "Info"),
+            "label": label,
             "source": component_pred,
-            "tags": infer_tags(f"Status: {status_code}", component_pred, "error" if code >= 500 else "warning"),
+            "tags": infer_tags(f"{level} Status: {status_code} {message}", component_pred, level),
             "source_type": source_type
         }
     return None

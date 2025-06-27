@@ -10,6 +10,11 @@ variable "region" {
   default     = "us-east"
 }
 
+variable "resource_group_id" {
+  description = "The resource group ID where the Code Engine app resides"
+  type        = string
+}
+
 variable "project_id" {
   description = "Code Engine project ID"
   type        = string

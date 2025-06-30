@@ -10,7 +10,7 @@ variable "region" {
   default     = "us-east"
 }
 
-variable "your_resource_group_name" {
+variable "resource_group_name" {
   description = "The resource group ID where the Code Engine app resides"
   type        = string
   default     = "Default"  

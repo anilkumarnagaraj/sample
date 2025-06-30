@@ -13,7 +13,7 @@
 #}
 
 data "ibm_resource_group" "resource_group" {
-   name = var.your_resource_group_name
+   name = var.resource_group_name
 }
 
 resource "ibm_code_engine_project" "code_engine_project_instance" {

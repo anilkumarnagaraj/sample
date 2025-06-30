@@ -10,19 +10,14 @@ variable "region" {
   default     = "us-east"
 }
 
-variable "resource_group_id" {
+variable "your_resource_group_name" {
   description = "The resource group ID where the Code Engine app resides"
   type        = string
+  default     = "Default"  
 }
 
-variable "project_id" {
-  description = "Code Engine project ID"
-  type        = string
-  default     = "e5511317-2c53-409a-b1aa-201e6eaaa2bd" 
-}
-
-variable "app_name" {
+variable "project_name" {
   description = "Code Engine application name"
   type        = string
-  default     = "application-e5" 
+  default     = "ce-proj-01" 
 }
